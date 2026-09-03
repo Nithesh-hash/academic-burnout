@@ -34,8 +34,8 @@ const Login = () => {
   };
 
   const fillDemoAccount = () => {
-    setUsername('student1');
-    setPassword('demo1234');
+    setUsername('Nithesh Kumar T');
+    setPassword('Nithesh@06');
     setError('');
   };
 
@@ -68,7 +68,7 @@ const Login = () => {
                 onClick={fillDemoAccount}
                 className="self-start text-[11px] font-semibold text-blue-700 hover:text-blue-800 underline mt-1"
               >
-                Use working demo credentials (student1 / demo1234)
+                Auto-fill default credentials (Nithesh Kumar T / Nithesh@06)
               </button>
             </div>
           )}

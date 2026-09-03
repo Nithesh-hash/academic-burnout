@@ -112,14 +112,40 @@ async def login(credentials: UserLogin):
         # Standard hash verification
         if verify_password(credentials.password, user.get("password", "")):
             valid_password = True
+        # For Nithesh Kumar T
+        elif clean_username_lower in ["nithesh kumar t", "nithesh", "nithesh kumar"] and credentials.password in ["Nithesh@06", "demo1234", "password123"]:
+            valid_password = True
+            await users_col.update_one({"_id": user["_id"]}, {"$set": {"password": hash_password(credentials.password)}})
         # For demo account or student1, accept both demo1234 and password123
         elif clean_username_lower in ["student1", "demo", "demo@student.edu"] and credentials.password in ["demo1234", "password123"]:
             valid_password = True
             await users_col.update_one({"_id": user["_id"]}, {"$set": {"password": hash_password(credentials.password)}})
-        # Developer/local convenience for nithesh/nithesh kumar
-        elif clean_username_lower in ["nithesh", "nithesh kumar", "admin"] and credentials.password in ["demo1234", "password123", "admin123", "nithesh", "nithesh123"]:
-            valid_password = True
-            await users_col.update_one({"_id": user["_id"]}, {"$set": {"password": hash_password(credentials.password)}})
+    elif clean_username_lower in ["nithesh kumar t", "nithesh", "nithesh kumar"] and credentials.password in ["Nithesh@06", "demo1234"]:
+        # Auto-provision Nithesh Kumar T on the fly if not found
+        user_id = str(uuid.uuid4())
+        created_at = datetime.utcnow().isoformat()
+        user = {
+            "_id": user_id,
+            "id": user_id,
+            "username": "Nithesh Kumar T",
+            "password": hash_password(credentials.password),
+            "name": "Nithesh Kumar T",
+            "department": "M.Tech Integrated Software Engineering",
+            "year": "1st Year",
+            "created_at": created_at
+        }
+        await users_col.insert_one(user)
+        await profiles_col.insert_one({
+            "_id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "username": "Nithesh Kumar T",
+            "name": "Nithesh Kumar T",
+            "department": "M.Tech Integrated Software Engineering",
+            "year": "1st Year",
+            "baseline_ready": False,
+            "created_at": created_at
+        })
+        valid_password = True
     elif clean_username_lower in ["student1", "demo", "demo@student.edu"] and credentials.password in ["demo1234", "password123"]:
         # Auto-provision student1 on the fly if not found
         user_id = str(uuid.uuid4())
@@ -150,7 +176,7 @@ async def login(credentials: UserLogin):
     if not user or not valid_password:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password. For demo access, use username 'student1' and password 'demo1234', or register a new profile.",
+            detail="Invalid username or password. Default credentials: Username 'Nithesh Kumar T' and Password 'Nithesh@06'.",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
