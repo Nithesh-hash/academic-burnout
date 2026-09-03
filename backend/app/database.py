@@ -50,6 +50,25 @@ class FallbackCollection:
         return InsertResult(doc_to_save["_id"])
 
     async def find_one(self, query: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        import re
+        for d in self.docs:
+            match = True
+            for k, v in query.items():
+                target_val = d.get(k)
+                if isinstance(v, dict) and "$regex" in v:
+                    pattern = v["$regex"]
+                    flags = re.IGNORECASE if v.get("$options") == "i" else 0
+                    if not (isinstance(target_val, str) and re.search(pattern, target_val, flags)):
+                        match = False
+                        break
+                elif target_val != v:
+                    match = False
+                    break
+            if match:
+                return dict(d)
+        return None
+
+    async def update_one(self, query: Dict[str, Any], update: Dict[str, Any]):
         for d in self.docs:
             match = True
             for k, v in query.items():
@@ -57,8 +76,14 @@ class FallbackCollection:
                     match = False
                     break
             if match:
-                return dict(d)
-        return None
+                if "$set" in update:
+                    for sk, sv in update["$set"].items():
+                        d[sk] = sv
+                else:
+                    for sk, sv in update.items():
+                        d[sk] = sv
+                self._save()
+                break
 
     def find(self, query: Dict[str, Any]):
         results = []

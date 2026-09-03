@@ -26,6 +26,42 @@ app.include_router(risk.router)
 @app.on_event("startup")
 async def startup_db_client():
     await db_manager.connect()
+    # Ensure default student1 demo account is initialized
+    try:
+        import uuid
+        from datetime import datetime
+        from app.auth import hash_password
+        users_col = db_manager.get_collection("Users")
+        profiles_col = db_manager.get_collection("StudentProfiles")
+        student1 = await users_col.find_one({"username": "student1"})
+        demo_pwd_hash = hash_password("demo1234")
+        if not student1:
+            user_id = str(uuid.uuid4())
+            created_at = datetime.utcnow().isoformat()
+            await users_col.insert_one({
+                "_id": user_id,
+                "id": user_id,
+                "username": "student1",
+                "password": demo_pwd_hash,
+                "name": "Student Demo",
+                "department": "M.Tech Integrated Software Engineering",
+                "year": "1st Year",
+                "created_at": created_at
+            })
+            await profiles_col.insert_one({
+                "_id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "username": "student1",
+                "name": "Student Demo",
+                "department": "M.Tech Integrated Software Engineering",
+                "year": "1st Year",
+                "baseline_ready": False,
+                "created_at": created_at
+            })
+        else:
+            await users_col.update_one({"_id": student1["_id"]}, {"$set": {"password": demo_pwd_hash}})
+    except Exception as e:
+        print(f"Demo user auto-init notice: {e}")
 
 @app.get("/")
 @app.get("/api/health")
