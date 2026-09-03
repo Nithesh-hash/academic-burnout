@@ -85,6 +85,25 @@ class FallbackCollection:
                 self._save()
                 break
 
+    async def delete_many(self, query: Dict[str, Any]):
+        initial_count = len(self.docs)
+        new_docs = []
+        for d in self.docs:
+            match = True
+            for k, v in query.items():
+                if d.get(k) != v:
+                    match = False
+                    break
+            if not match:
+                new_docs.append(d)
+        self.docs = new_docs
+        self._save()
+        deleted_count = initial_count - len(self.docs)
+        class DeleteResult:
+            def __init__(self, count):
+                self.deleted_count = count
+        return DeleteResult(deleted_count)
+
     def find(self, query: Dict[str, Any]):
         results = []
         for d in self.docs:

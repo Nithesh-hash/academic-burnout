@@ -1,9 +1,9 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, LayoutDashboard, Activity, PlusCircle, LogOut, User } from 'lucide-react';
+import { ShieldCheck, LayoutDashboard, Activity, PlusCircle, LogOut, Settings, UserCheck } from 'lucide-react';
 
-const Navbar = ({ onOpenLogModal }) => {
+const Navbar = ({ onOpenLogModal, onOpenSettingsModal }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -32,9 +32,9 @@ const Navbar = ({ onOpenLogModal }) => {
               </div>
             </Link>
 
-            <span className="hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+            <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              Privacy-Friendly AI
+              Client Privacy Shield Active
             </span>
           </div>
 
@@ -43,8 +43,8 @@ const Navbar = ({ onOpenLogModal }) => {
             <nav className="hidden md:flex items-center space-x-1">
               <Link
                 to="/"
-                className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive('/') ? 'bg-slate-100 text-blue-600' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors ${
+                  isActive('/') ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
                 <LayoutDashboard className="w-4 h-4" />
@@ -53,41 +53,56 @@ const Navbar = ({ onOpenLogModal }) => {
 
               <Link
                 to="/risk-analysis"
-                className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive('/risk-analysis') ? 'bg-slate-100 text-blue-600' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors ${
+                  isActive('/risk-analysis') ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
                 <Activity className="w-4 h-4" />
-                <span>AI Risk Analysis</span>
+                <span>AI Risk Analysis & Audit</span>
               </Link>
             </nav>
           )}
 
           {/* Actions & Profile */}
           {user ? (
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2.5 sm:space-x-3">
               <button
                 onClick={onOpenLogModal}
-                className="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all active:scale-95"
+                className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all active:scale-95"
               >
                 <PlusCircle className="w-4 h-4" />
                 <span className="hidden sm:inline">Log Behaviour</span>
               </button>
 
+              {onOpenSettingsModal && (
+                <button
+                  onClick={onOpenSettingsModal}
+                  title="Baseline & Export Settings"
+                  className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-slate-200 transition-colors"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
+              )}
+
               <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>
 
               {/* User badge */}
-              <div className="hidden lg:flex flex-col text-right">
-                <span className="text-sm font-semibold text-slate-800 leading-snug">{user.name}</span>
-                <span className="text-xs text-slate-500">{user.department} • {user.year}</span>
+              <div className="hidden lg:flex items-center gap-2 pl-1">
+                <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-bold text-xs">
+                  {user.name ? user.name.charAt(0).toUpperCase() : 'S'}
+                </div>
+                <div className="flex flex-col text-left">
+                  <span className="text-xs font-bold text-slate-800 leading-snug">{user.name}</span>
+                  <span className="text-[10px] text-slate-400 leading-tight">{user.year || 'Student'}</span>
+                </div>
               </div>
 
               <button
                 onClick={handleLogout}
                 title="Logout"
-                className="p-2 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
               >
-                <LogOut className="w-5 h-5" />
+                <LogOut className="w-4 h-4" />
               </button>
             </div>
           ) : (

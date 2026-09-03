@@ -61,6 +61,8 @@ async def analyze_current_risk(
         "risk_score": analysis_result["risk_score"],
         "risk_level": analysis_result["risk_level"],
         "reasons": analysis_result["reasons"],
+        "shap_attributions": analysis_result.get("shap_attributions", []),
+        "action_recommendations": analysis_result.get("action_recommendations", []),
         "baseline": analysis_result["baseline"],
         "current_metrics": analysis_result["current_metrics"],
         "timestamp": datetime.utcnow().isoformat()
@@ -69,7 +71,7 @@ async def analyze_current_risk(
 @router.get("/risk-history")
 @router.get("/api/risk-history")
 async def get_risk_history(
-    limit: int = 30,
+    limit: int = 50,
     current_user: dict = Depends(get_current_user)
 ):
     user_id = current_user["id"]
@@ -101,3 +103,25 @@ async def get_personal_baseline(current_user: dict = Depends(get_current_user)):
         "baseline": baseline,
         "sample_size": len(history_records)
     }
+
+@router.post("/api/baseline/reset")
+@router.post("/baseline/reset")
+async def reset_student_baseline(current_user: dict = Depends(get_current_user)):
+    """
+    Clears current semester historical behaviour and risk predictions
+    to initiate a fresh baseline calibration cycle.
+    """
+    user_id = current_user["id"]
+    behaviour_col = db_manager.get_collection("BehaviourRecords")
+    risk_col = db_manager.get_collection("RiskPredictions")
+
+    del_b = await behaviour_col.delete_many({"user_id": user_id})
+    del_r = await risk_col.delete_many({"user_id": user_id})
+
+    return {
+        "message": "Historic baseline successfully reset for a new semester.",
+        "deleted_behaviour_records": getattr(del_b, "deleted_count", 0),
+        "deleted_risk_predictions": getattr(del_r, "deleted_count", 0),
+        "timestamp": datetime.utcnow().isoformat()
+    }
+

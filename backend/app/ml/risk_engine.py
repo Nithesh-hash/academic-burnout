@@ -191,10 +191,49 @@ class AIBehaviourRiskEngine:
         if not reasons:
             reasons.append("Academic and lifestyle indicators are aligned with your healthy baseline.")
 
+        # Calculate SHAP-style Feature Impact Attributions
+        shap_attributions = self._calculate_shap_attributions(
+            current_metrics={
+                "sleep_hours": c_sleep,
+                "study_hours": c_study,
+                "screen_time": c_screen,
+                "assignment_delay": c_delay,
+                "attendance": c_attendance,
+                "workload": c_workload
+            },
+            baseline_metrics=baseline,
+            penalties={
+                "sleep": sleep_diff * 12 if sleep_diff > 0.5 else (15 if c_sleep < 5.0 else 0),
+                "workload": workload_diff * 10 if workload_diff > 0.5 else 0,
+                "screen": screen_diff * 6 if screen_diff > 1.0 else 0,
+                "delay": (delay_diff * 10 if delay_diff > 0 else 0) + (15 if c_delay >= 3 else 0),
+                "attendance": ((attendance_drop / 100.0) * 80 if attendance_drop > 2.0 else 0) + (20 if c_attendance < 75.0 else 0),
+                "study": study_drop * 8 if study_drop > 1.5 else 0
+            },
+            total_risk_score=risk_score
+        )
+
+        # Generate Actionable Recommendations
+        action_recommendations = self._generate_actionable_recommendations(
+            risk_level=risk_level,
+            risk_score=risk_score,
+            c_sleep=c_sleep,
+            b_sleep=b_sleep,
+            c_delay=c_delay,
+            c_screen=c_screen,
+            b_screen=b_screen,
+            c_attendance=c_attendance,
+            c_study=c_study,
+            b_study=b_study,
+            c_workload=c_workload
+        )
+
         return {
             "risk_score": risk_score,
             "risk_level": risk_level,
             "reasons": reasons,
+            "shap_attributions": shap_attributions,
+            "action_recommendations": action_recommendations,
             "baseline": baseline,
             "current_metrics": {
                 "sleep_hours": c_sleep,
@@ -206,5 +245,240 @@ class AIBehaviourRiskEngine:
             }
         }
 
+    def _calculate_shap_attributions(
+        self,
+        current_metrics: Dict[str, float],
+        baseline_metrics: Dict[str, float],
+        penalties: Dict[str, float],
+        total_risk_score: int
+    ) -> List[Dict[str, Any]]:
+        """
+        Computes SHAP-style relative contribution score and percentage impact
+        for each driving behavioural dimension.
+        """
+        features_meta = [
+            {
+                "key": "sleep_hours",
+                "label": "Sleep Duration",
+                "penalty": penalties.get("sleep", 0),
+                "current": current_metrics["sleep_hours"],
+                "baseline": baseline_metrics.get("sleep_hours", 7.5),
+                "unit": "hrs",
+                "is_adverse": current_metrics["sleep_hours"] < baseline_metrics.get("sleep_hours", 7.5)
+            },
+            {
+                "key": "assignment_delay",
+                "label": "Assignment Delay",
+                "penalty": penalties.get("delay", 0),
+                "current": current_metrics["assignment_delay"],
+                "baseline": baseline_metrics.get("assignment_delay", 0.0),
+                "unit": "days",
+                "is_adverse": current_metrics["assignment_delay"] > baseline_metrics.get("assignment_delay", 0.0)
+            },
+            {
+                "key": "attendance",
+                "label": "Class Attendance",
+                "penalty": penalties.get("attendance", 0),
+                "current": current_metrics["attendance"],
+                "baseline": baseline_metrics.get("attendance", 90.0),
+                "unit": "%",
+                "is_adverse": current_metrics["attendance"] < baseline_metrics.get("attendance", 90.0)
+            },
+            {
+                "key": "workload",
+                "label": "Workload Pressure",
+                "penalty": penalties.get("workload", 0),
+                "current": current_metrics["workload"],
+                "baseline": baseline_metrics.get("workload", 3.0),
+                "unit": "lvl",
+                "is_adverse": current_metrics["workload"] > baseline_metrics.get("workload", 3.0)
+            },
+            {
+                "key": "screen_time",
+                "label": "Screen Time",
+                "penalty": penalties.get("screen", 0),
+                "current": current_metrics["screen_time"],
+                "baseline": baseline_metrics.get("screen_time", 3.5),
+                "unit": "hrs",
+                "is_adverse": current_metrics["screen_time"] > baseline_metrics.get("screen_time", 3.5)
+            },
+            {
+                "key": "study_hours",
+                "label": "Study Consistency",
+                "penalty": penalties.get("study", 0),
+                "current": current_metrics["study_hours"],
+                "baseline": baseline_metrics.get("study_hours", 4.0),
+                "unit": "hrs",
+                "is_adverse": current_metrics["study_hours"] < baseline_metrics.get("study_hours", 4.0)
+            }
+        ]
+
+        total_penalty = sum(f["penalty"] for f in features_meta)
+        attributions = []
+
+        for f in features_meta:
+            penalty = f["penalty"]
+            diff = f["current"] - f["baseline"]
+            
+            if total_penalty > 0:
+                impact_pct = round((penalty / total_penalty) * 100, 1)
+            else:
+                # Default baseline contribution
+                impact_pct = 0.0
+
+            if f["is_adverse"] and penalty > 0:
+                direction = "risk_increase"
+                sign = "+"
+            elif not f["is_adverse"] and abs(diff) > 0:
+                direction = "protective"
+                sign = "-"
+                impact_pct = min(25.0, round(abs(diff) * 5, 1))
+            else:
+                direction = "neutral"
+                sign = ""
+                impact_pct = 0.0
+
+            attributions.append({
+                "feature": f["key"],
+                "label": f["label"],
+                "current_val": round(f["current"], 1),
+                "baseline_val": round(f["baseline"], 1),
+                "diff": round(diff, 1),
+                "unit": f["unit"],
+                "penalty_score": round(penalty, 1),
+                "impact_percentage": impact_pct,
+                "display_impact": f"{sign}{impact_pct}%",
+                "direction": direction
+            })
+
+        # Sort with highest risk accelerators first
+        attributions.sort(key=lambda x: (x["direction"] == "risk_increase", x["impact_percentage"]), reverse=True)
+        return attributions
+
+    def _generate_actionable_recommendations(
+        self,
+        risk_level: str,
+        risk_score: int,
+        c_sleep: float,
+        b_sleep: float,
+        c_delay: float,
+        c_screen: float,
+        b_screen: float,
+        c_attendance: float,
+        c_study: float,
+        b_study: float,
+        c_workload: float
+    ) -> List[Dict[str, Any]]:
+        """
+        Dynamically generates 2-3 personalized, quantitative recovery action items.
+        """
+        actions = []
+
+        if risk_level == "High":
+            # High urgency actions
+            if c_sleep < 6.5:
+                target_sleep = max(6.5, round(b_sleep, 1))
+                actions.append({
+                    "id": "rec_sleep",
+                    "title": "Sleep Recovery Target",
+                    "description": f"Target {target_sleep} hours of sleep over the next 2 nights to lower risk score below 50%.",
+                    "impact": "High Recovery Impact (-25% Risk)",
+                    "category": "Rest & Well-being",
+                    "completed": False
+                })
+
+            if c_delay > 0:
+                actions.append({
+                    "id": "rec_assignments",
+                    "title": "Clear Overdue Submissions",
+                    "description": f"Submit {int(c_delay)} delayed assignment(s) before this weekend to remove late-penalty anomaly flags.",
+                    "impact": "Immediate Academic Impact (-20% Risk)",
+                    "category": "Coursework",
+                    "completed": False
+                })
+
+            if c_screen > 5.5:
+                actions.append({
+                    "id": "rec_screen",
+                    "title": "Digital Detox Window",
+                    "description": f"Limit recreational screen time to under {round(b_screen + 0.5, 1)} hrs tomorrow evening with 30-min offline intervals.",
+                    "impact": "Stress Reduction (-15% Risk)",
+                    "category": "Lifestyle Routine",
+                    "completed": False
+                })
+
+            if len(actions) < 2:
+                actions.append({
+                    "id": "rec_workload",
+                    "title": "Workload Rebalancing",
+                    "description": "Break down high-workload modules into 25-minute Pomodoro focus sprints with 5-minute restorative breaks.",
+                    "impact": "Cognitive Load Relief",
+                    "category": "Study Strategy",
+                    "completed": False
+                })
+
+        elif risk_level == "Moderate":
+            if c_sleep < 7.0:
+                actions.append({
+                    "id": "rec_sleep",
+                    "title": "Stabilize Sleep Schedule",
+                    "description": f"Target at least {round(max(7.0, b_sleep), 1)} hrs sleep tonight to align with your personal baseline ({b_sleep} hrs).",
+                    "impact": "Moderate Recovery Impact (-18% Risk)",
+                    "category": "Rest & Well-being",
+                    "completed": False
+                })
+
+            if c_screen > b_screen + 1.0:
+                actions.append({
+                    "id": "rec_screen",
+                    "title": "Reduce Screen Fatigue",
+                    "description": f"Reduce daily non-academic screen time by 1.5 hours and implement 10-minute eye rest breaks.",
+                    "impact": "Fatigue Mitigation (-12% Risk)",
+                    "category": "Lifestyle Routine",
+                    "completed": False
+                })
+
+            if c_study < b_study - 1.0:
+                actions.append({
+                    "id": "rec_study",
+                    "title": "Reinforce Study Routine",
+                    "description": f"Schedule a focused {round(b_study, 1)}-hour review session to maintain regular academic momentum.",
+                    "impact": "Consistency Booster",
+                    "category": "Coursework",
+                    "completed": False
+                })
+
+            if len(actions) < 2:
+                actions.append({
+                    "id": "rec_attendance",
+                    "title": "Maintain Class Presence",
+                    "description": "Ensure 100% attendance in upcoming scheduled lectures to protect course standing.",
+                    "impact": "Protective Baseline Factor",
+                    "category": "Academic Health",
+                    "completed": False
+                })
+
+        else:
+            # Low Risk - Maintenance Actions
+            actions.append({
+                "id": "rec_maintain",
+                "title": "Maintain Baseline Balance",
+                "description": f"Your current routine matches your healthy baseline ({round(c_sleep, 1)}h sleep, {round(c_study, 1)}h study). Keep up the steady pace!",
+                "impact": "Optimal Risk Level (< 40%)",
+                "category": "Routine Maintenance",
+                "completed": False
+            })
+            actions.append({
+                "id": "rec_prevent",
+                "title": "Proactive Weekly Planning",
+                "description": "Review upcoming semester deadlines today to prevent assignment congestion during exam cycles.",
+                "impact": "Preventive Planning",
+                "category": "Academic Strategy",
+                "completed": False
+            })
+
+        return actions[:3]
+
 # Instantiate global engine instance
 risk_engine = AIBehaviourRiskEngine()
+

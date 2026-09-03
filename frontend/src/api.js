@@ -35,8 +35,10 @@ export const behaviourAPI = {
 
 export const riskAPI = {
   analyzeRisk: (data) => api.post('/api/analyze-risk', data),
-  getRiskHistory: (limit = 30) => api.get(`/api/risk-history?limit=${limit}`),
+  getRiskHistory: (limit = 50) => api.get(`/api/risk-history?limit=${limit}`),
   getPersonalBaseline: () => api.get('/api/baseline'),
+  resetBaseline: () => api.post('/api/baseline/reset'),
 };
 
 export default api;
+
