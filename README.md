@@ -248,3 +248,15 @@ academic-burnout/
 └── ml_model/
     └── isolation_forest.joblib          # Trained Isolation Forest scikit-learn model
 ```
+
+
+🛠️ If You Make Future Code Changes:
+Whenever you make changes to the React code or Python backend and want to update the .exe:
+
+powershell
+# 1. Build the updated frontend
+cd c:\Users\tnith\OneDrive\Desktop\ai\academic-burnout\frontend
+npm run build
+# 2. Re-package the .exe
+cd c:\Users\tnith\OneDrive\Desktop\ai\academic-burnout
+python -m PyInstaller AcademicBurnoutAI.spec --clean --noconfirm
