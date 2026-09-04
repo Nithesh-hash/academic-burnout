@@ -4,13 +4,14 @@ import StatusBar from '../components/StatusBar';
 import SettingsDrawer from '../components/SettingsDrawer';
 import LogBehaviourModal from '../components/LogBehaviourModal';
 import { riskAPI, behaviourAPI } from '../api';
-import { ShieldCheck, Cpu, EyeOff, Lock, CheckCircle, Activity, Download, Settings, RefreshCw, ChevronRight } from 'lucide-react';
+import { ShieldCheck, Cpu, EyeOff, Lock, CheckCircle, Activity, Download, Settings, RefreshCw, ChevronRight, Trash2 } from 'lucide-react';
 
 const RiskAnalysisPage = () => {
   const [riskHistory, setRiskHistory] = useState([]);
   const [behaviourHistory, setBehaviourHistory] = useState([]);
   const [baseline, setBaseline] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -29,6 +30,24 @@ const RiskAnalysisPage = () => {
       console.error("Failed to load risk analysis page:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteRecord = async (recordId, recordDate) => {
+    if (!recordId) return;
+    if (!window.confirm(`Are you sure you want to delete the audit record for ${recordDate || 'this date'}?`)) {
+      return;
+    }
+    setDeletingId(recordId);
+    try {
+      await riskAPI.deleteRiskRecord(recordId);
+      setRiskHistory(prev => prev.filter(r => (r.id || r._id) !== recordId));
+      fetchData();
+    } catch (err) {
+      console.error("Failed to delete record:", err);
+      alert("Failed to delete record. Please try again.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -147,6 +166,7 @@ const RiskAnalysisPage = () => {
                   <th className="p-3.5">Risk Tier</th>
                   <th className="p-3.5">Key Metrics (Sleep / Study / Delay)</th>
                   <th className="p-3.5">Primary AI Reason</th>
+                  <th className="p-3.5 text-center w-16">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -156,9 +176,10 @@ const RiskAnalysisPage = () => {
                     const sleepVal = metrics.sleep_hours ?? metrics.sleep_duration ?? 'N/A';
                     const studyVal = metrics.study_hours ?? 'N/A';
                     const delayVal = metrics.assignment_delay ?? 0;
+                    const recordId = item.id || item._id;
 
                     return (
-                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                      <tr key={recordId || idx} className="hover:bg-slate-50/80 transition-colors">
                         <td className="p-3.5 font-bold text-slate-900 font-mono">{item.date || 'Today'}</td>
                         <td className="p-3.5">
                           <span
@@ -196,12 +217,26 @@ const RiskAnalysisPage = () => {
                         <td className="p-3.5 text-slate-600 max-w-xs truncate">
                           {item.reasons && item.reasons.length > 0 ? item.reasons[0] : 'Healthy baseline aligned'}
                         </td>
+                        <td className="p-3.5 text-center">
+                          <button
+                            onClick={() => handleDeleteRecord(recordId, item.date)}
+                            disabled={deletingId === recordId}
+                            title="Delete Record"
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors inline-flex items-center justify-center disabled:opacity-50 cursor-pointer"
+                          >
+                            {deletingId === recordId ? (
+                              <RefreshCw className="w-4 h-4 animate-spin text-rose-500" />
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
+                          </button>
+                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan="5" className="p-6 text-center text-slate-400 font-medium">
+                    <td colSpan="6" className="p-6 text-center text-slate-400 font-medium">
                       No historical risk analysis entries logged yet. Log behaviour or load sample data from the dashboard.
                     </td>
                   </tr>

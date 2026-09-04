@@ -30,15 +30,18 @@ export const authAPI = {
 export const behaviourAPI = {
   logBehaviour: (data) => api.post('/api/behaviour', data),
   getHistory: (limit = 30) => api.get(`/api/behaviour-history?limit=${limit}`),
+  deleteRecord: (id) => api.delete(`/api/behaviour/${id}`),
   seedSampleData: () => api.post('/api/behaviour/seed'),
 };
 
 export const riskAPI = {
   analyzeRisk: (data) => api.post('/api/analyze-risk', data),
   getRiskHistory: (limit = 50) => api.get(`/api/risk-history?limit=${limit}`),
+  deleteRiskRecord: (id) => api.delete(`/api/risk-history/${id}`),
   getPersonalBaseline: () => api.get('/api/baseline'),
   resetBaseline: () => api.post('/api/baseline/reset'),
 };
 
 export default api;
+
 

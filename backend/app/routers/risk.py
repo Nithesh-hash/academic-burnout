@@ -125,3 +125,43 @@ async def reset_student_baseline(current_user: dict = Depends(get_current_user))
         "timestamp": datetime.utcnow().isoformat()
     }
 
+@router.delete("/risk-history/{record_id}")
+@router.delete("/api/risk-history/{record_id}")
+async def delete_risk_record(
+    record_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Deletes a specific risk prediction entry and optionally its associated behaviour record.
+    """
+    user_id = current_user["id"]
+    risk_col = db_manager.get_collection("RiskPredictions")
+    behaviour_col = db_manager.get_collection("BehaviourRecords")
+
+    # Find the risk document
+    risk_doc = None
+    if hasattr(risk_col, "find_one"):
+        risk_doc = await risk_col.find_one({"id": record_id, "user_id": user_id})
+        if not risk_doc:
+            risk_doc = await risk_col.find_one({"_id": record_id, "user_id": user_id})
+
+    # Delete the risk record
+    del_r1 = await risk_col.delete_many({"id": record_id, "user_id": user_id})
+    del_r2 = await risk_col.delete_many({"_id": record_id, "user_id": user_id})
+
+    # If linked behaviour record exists, delete it too
+    if risk_doc:
+        beh_id = risk_doc.get("behaviour_record_id")
+        timestamp = risk_doc.get("timestamp")
+        if beh_id:
+            await behaviour_col.delete_many({"id": beh_id, "user_id": user_id})
+            await behaviour_col.delete_many({"_id": beh_id, "user_id": user_id})
+        elif timestamp:
+            await behaviour_col.delete_many({"timestamp": timestamp, "user_id": user_id})
+
+    return {
+        "message": "Risk record deleted successfully.",
+        "record_id": record_id
+    }
+
+

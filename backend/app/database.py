@@ -104,6 +104,25 @@ class FallbackCollection:
                 self.deleted_count = count
         return DeleteResult(deleted_count)
 
+    async def delete_one(self, query: Dict[str, Any]):
+        for idx, d in enumerate(self.docs):
+            match = True
+            for k, v in query.items():
+                if d.get(k) != v:
+                    match = False
+                    break
+            if match:
+                self.docs.pop(idx)
+                self._save()
+                class DeleteResult:
+                    def __init__(self, count):
+                        self.deleted_count = count
+                return DeleteResult(1)
+        class DeleteResult:
+            def __init__(self, count):
+                self.deleted_count = count
+        return DeleteResult(0)
+
     def find(self, query: Dict[str, Any]):
         results = []
         for d in self.docs:

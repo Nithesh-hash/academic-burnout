@@ -182,3 +182,20 @@ async def seed_sample_history(current_user: dict = Depends(get_current_user)):
         created_count += 1
 
     return {"message": f"Successfully seeded {created_count} historical behaviour and risk records."}
+@router.delete("/behaviour/{record_id}")
+@router.delete("/api/behaviour/{record_id}")
+async def delete_behaviour_record(
+    record_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Deletes a specific behaviour record and its associated risk prediction."""
+    user_id = current_user["id"]
+    behaviour_col = db_manager.get_collection("BehaviourRecords")
+    risk_col = db_manager.get_collection("RiskPredictions")
+
+    await behaviour_col.delete_many({"id": record_id, "user_id": user_id})
+    await behaviour_col.delete_many({"_id": record_id, "user_id": user_id})
+    await risk_col.delete_many({"behaviour_record_id": record_id, "user_id": user_id})
+
+    return {"message": "Behaviour record deleted successfully.", "record_id": record_id}
+
