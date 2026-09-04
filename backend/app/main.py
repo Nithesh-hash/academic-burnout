@@ -86,9 +86,8 @@ async def startup_db_client():
         print(f"User auto-init notice: {e}")
 
 
-@app.get("/")
 @app.get("/api/health")
-async def root():
+async def health_check():
     return {
         "status": "healthy",
         "system": "Adaptive AI-Based Academic Behaviour Risk Monitoring System",
@@ -96,6 +95,57 @@ async def root():
         "database_mode": "MongoDB" if db_manager.is_mongo else "Local Collection Engine"
     }
 
+# Static file serving & SPA fallback
+import os
+import sys
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+def get_dist_dir():
+    # 1. PyInstaller bundled directory
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        bundled_dist = os.path.join(sys._MEIPASS, "frontend_dist")
+        if os.path.exists(bundled_dist):
+            return bundled_dist
+    # 2. Next to executable
+    if getattr(sys, "frozen", False):
+        exe_dist = os.path.join(os.path.dirname(sys.executable), "frontend_dist")
+        if os.path.exists(exe_dist):
+            return exe_dist
+    # 3. Development relative directory
+    dev_dist = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "frontend", "dist")
+    if os.path.exists(dev_dist):
+        return dev_dist
+    return None
+
+dist_dir = get_dist_dir()
+if dist_dir and os.path.exists(dist_dir):
+    assets_dir = os.path.join(dist_dir, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa_frontend(full_path: str):
+        if full_path.startswith("api") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
+            return None
+        candidate = os.path.join(dist_dir, full_path)
+        if full_path and os.path.isfile(candidate):
+            return FileResponse(candidate)
+        index_file = os.path.join(dist_dir, "index.html")
+        if os.path.exists(index_file):
+            return FileResponse(index_file)
+        return {"message": "Frontend index.html not found"}
+else:
+    @app.get("/")
+    async def root():
+        return {
+            "status": "healthy",
+            "system": "Adaptive AI-Based Academic Behaviour Risk Monitoring System",
+            "version": "1.0.0",
+            "database_mode": "MongoDB" if db_manager.is_mongo else "Local Collection Engine"
+        }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
+

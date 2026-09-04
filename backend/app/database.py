@@ -158,12 +158,15 @@ class FallbackCollection:
 
 class DatabaseManager:
     def __init__(self):
+        import sys
         self.is_mongo = False
         self.db = None
         self.client = None
-        self.fallback_dir = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "..", "data"
-        )
+        if getattr(sys, "frozen", False):
+            base_dir = os.path.dirname(sys.executable)
+        else:
+            base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+        self.fallback_dir = os.path.join(base_dir, "data")
         self.fallback_collections: Dict[str, FallbackCollection] = {}
 
     async def connect(self):

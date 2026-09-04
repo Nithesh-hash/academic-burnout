@@ -21,10 +21,14 @@ class AIBehaviourRiskEngine:
             print("Warning: scikit-learn not available. Using heuristic baseline risk analyzer.")
             return
 
-        model_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "../../..", "ml_model", "isolation_forest.joblib"
-        )
+        import sys
+        if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+            model_path = os.path.join(sys._MEIPASS, "ml_model", "isolation_forest.joblib")
+        else:
+            model_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "../../..", "ml_model", "isolation_forest.joblib"
+            )
         if os.path.exists(model_path):
             try:
                 self.model = joblib.load(model_path)
