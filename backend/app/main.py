@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import db_manager
-from app.routers import auth, behaviour, risk
+from app.routers import auth, behaviour, risk, timetable, extracurricular
 
 app = FastAPI(
     title="Adaptive AI Academic Behaviour Risk Monitoring System API",
@@ -22,6 +22,8 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(behaviour.router)
 app.include_router(risk.router)
+app.include_router(timetable.router)
+app.include_router(extracurricular.router)
 
 @app.on_event("startup")
 async def startup_db_client():
@@ -100,6 +102,9 @@ import os
 import sys
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+
+os.makedirs("uploads", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 def get_dist_dir():
     # 1. PyInstaller bundled directory

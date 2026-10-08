@@ -10,6 +10,8 @@ import TrendCharts from '../components/TrendCharts';
 import PersonalBaselineCard from '../components/PersonalBaselineCard';
 import LogBehaviourModal from '../components/LogBehaviourModal';
 import SettingsDrawer from '../components/SettingsDrawer';
+import TimetableUploadCard from '../components/TimetableUploadCard';
+import ExtracurricularTracker from '../components/ExtracurricularTracker';
 import { Sparkles, PlusCircle, RefreshCw, Clock, Moon, Monitor, GraduationCap, Layers, Settings, FileSpreadsheet } from 'lucide-react';
 
 const Dashboard = () => {
@@ -153,6 +155,12 @@ const Dashboard = () => {
               riskLevel={latestAnalysis?.risk_level ?? 'Low'}
               riskScore={latestAnalysis?.risk_score ?? 0}
             />
+
+            {/* New Features: Timetable and Extracurriculars */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <TimetableUploadCard />
+              <ExtracurricularTracker />
+            </div>
 
             {/* Row 3: Behaviour Summary Metric Cards */}
             {latestRecord && (

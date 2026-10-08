@@ -23,6 +23,11 @@ async def analyze_current_risk(
     history_cursor = behaviour_col.find({"user_id": user_id})
     history_records = await history_cursor.to_list(length=100)
     
+    extra_col = db_manager.get_collection("ExtracurricularActivities")
+    extra_cursor = extra_col.find({"user_id": user_id})
+    extra_records = await extra_cursor.to_list(length=100)
+    total_extra_hours = sum(float(act.get("duration_hours", 0)) for act in extra_records)
+    
     if record_in:
         current_metrics = {
             "sleep_hours": record_in.sleep_duration,
@@ -30,7 +35,8 @@ async def analyze_current_risk(
             "screen_time": record_in.screen_time,
             "assignment_delay": record_in.assignment_delay,
             "attendance": record_in.attendance,
-            "workload": record_in.workload
+            "workload": record_in.workload,
+            "extracurricular_hours": total_extra_hours
         }
     elif history_records:
         # Use latest logged record
@@ -41,7 +47,8 @@ async def analyze_current_risk(
             "screen_time": latest.get("screen_time", 3.5),
             "assignment_delay": latest.get("assignment_delay", 0),
             "attendance": latest.get("attendance", 95.0),
-            "workload": latest.get("workload", 3)
+            "workload": latest.get("workload", 3),
+            "extracurricular_hours": total_extra_hours
         }
     else:
         # Default baseline initial check
@@ -51,7 +58,8 @@ async def analyze_current_risk(
             "screen_time": 3.5,
             "assignment_delay": 0,
             "attendance": 95.0,
-            "workload": 3
+            "workload": 3,
+            "extracurricular_hours": total_extra_hours
         }
 
     analysis_result = risk_engine.analyze_risk(current_metrics, history_records)
@@ -94,6 +102,12 @@ async def get_personal_baseline(current_user: dict = Depends(get_current_user)):
     history_records = await history_cursor.to_list(length=100)
     
     baseline = risk_engine.calculate_baseline(history_records)
+    
+    extra_col = db_manager.get_collection("ExtracurricularActivities")
+    extra_cursor = extra_col.find({"user_id": user_id})
+    extra_records = await extra_cursor.to_list(length=100)
+    total_extra_hours = sum(float(act.get("duration_hours", 0)) for act in extra_records)
+    baseline["extracurricular_hours"] = total_extra_hours
     
     return {
         "user_id": user_id,

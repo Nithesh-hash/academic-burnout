@@ -25,6 +25,8 @@ const ExplanationCard = ({ reasons = [], score = 0, shapAttributions = [], curre
     const b_screen = baseline.screen_time ?? 3.5;
     const c_study = currentMetrics.study_hours ?? 4.0;
     const b_study = baseline.study_hours ?? 4.0;
+    const c_extra = currentMetrics.extracurricular_hours ?? 0.0;
+    const b_extra = 15.0;
 
     const list = [
       {
@@ -92,6 +94,17 @@ const ExplanationCard = ({ reasons = [], score = 0, shapAttributions = [], curre
         impact_percentage: c_study < b_study ? Math.min(20, Math.round((b_study - c_study) * 10)) : 0,
         direction: c_study < b_study ? 'risk_increase' : 'protective',
         display_impact: c_study < b_study ? `+${Math.min(20, Math.round((b_study - c_study) * 10))}%` : '-10%'
+      },
+      {
+        feature: 'extracurricular_hours',
+        label: 'Extracurriculars',
+        current_val: c_extra,
+        baseline_val: b_extra,
+        diff: c_extra - b_extra,
+        unit: 'hrs',
+        impact_percentage: c_extra > b_extra ? Math.min(20, Math.round((c_extra - b_extra) * 5)) : 0,
+        direction: c_extra > b_extra ? 'risk_increase' : 'neutral',
+        display_impact: c_extra > b_extra ? `+${Math.min(20, Math.round((c_extra - b_extra) * 5))}%` : '0%'
       }
     ];
 

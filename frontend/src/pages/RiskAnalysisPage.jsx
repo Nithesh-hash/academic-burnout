@@ -3,6 +3,7 @@ import Navbar from '../components/Navbar';
 import StatusBar from '../components/StatusBar';
 import SettingsDrawer from '../components/SettingsDrawer';
 import LogBehaviourModal from '../components/LogBehaviourModal';
+import WhatIfSimulator from '../components/WhatIfSimulator';
 import { riskAPI, behaviourAPI } from '../api';
 import { ShieldCheck, Cpu, EyeOff, Lock, CheckCircle, Activity, Download, Settings, RefreshCw, ChevronRight, Trash2 } from 'lucide-react';
 
@@ -103,6 +104,9 @@ const RiskAnalysisPage = () => {
             </button>
           </div>
         </div>
+
+        {/* What-If Simulator */}
+        <WhatIfSimulator />
 
         {/* Privacy Guarantees Box */}
         <div className="bg-gradient-to-r from-emerald-900 via-teal-950 to-slate-900 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden border border-emerald-800/40">

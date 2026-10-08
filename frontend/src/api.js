@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -40,6 +40,19 @@ export const riskAPI = {
   deleteRiskRecord: (id) => api.delete(`/api/risk-history/${id}`),
   getPersonalBaseline: () => api.get('/api/baseline'),
   resetBaseline: () => api.post('/api/baseline/reset'),
+};
+
+export const timetableAPI = {
+  uploadScreenshot: (formData) => api.post('/api/timetable-screenshot/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  getStatus: () => api.get('/api/timetable-screenshot'),
+};
+
+export const extracurricularAPI = {
+  create: (data) => api.post('/api/extracurricular', data),
+  getAll: () => api.get('/api/extracurricular'),
+  delete: (id) => api.delete(`/api/extracurricular/${id}`),
 };
 
 export default api;

@@ -25,6 +25,20 @@ class UserResponse(BaseModel):
     department: str
     year: str
     created_at: Optional[str] = None
+    has_timetable: Optional[bool] = False
+    timetable_url: Optional[str] = None
+
+# Extracurricular Models
+class ExtracurricularActivityCreate(BaseModel):
+    name: str = Field(..., description="Name of the activity or club")
+    day_of_week: str = Field(..., description="Monday, Tuesday, etc.")
+    duration_hours: float = Field(..., ge=0, description="Hours spent per week")
+    type: str = Field("Club", description="Club, Sport, Hobby, Work, etc.")
+
+class ExtracurricularActivity(ExtracurricularActivityCreate):
+    id: str
+    user_id: str
+    created_at: str
 
 # Behaviour Input Model
 class BehaviourRecordCreate(BaseModel):

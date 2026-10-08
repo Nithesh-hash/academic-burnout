@@ -94,6 +94,7 @@ class AIBehaviourRiskEngine:
         c_delay = float(current.get("assignment_delay", 0))
         c_attendance = float(current.get("attendance", 90.0))
         c_workload = float(current.get("workload", 3))
+        c_extra = float(current.get("extracurricular_hours", 0))
 
         b_sleep = baseline["sleep_hours"]
         b_study = baseline["study_hours"]
@@ -154,6 +155,10 @@ class AIBehaviourRiskEngine:
         if study_drop > 1.5:
             penalties += min(15, study_drop * 8)
 
+        # Excessive Extracurricular Hours
+        if c_extra > 15.0:
+            penalties += min(20, (c_extra - 15.0) * 2)
+
         # Combine Isolation Forest + Baseline Penalties
         raw_score = (if_anomaly_factor * 35.0) + (penalties * 0.65)
         risk_score = int(round(min(100.0, max(0.0, raw_score))))
@@ -192,6 +197,9 @@ class AIBehaviourRiskEngine:
         if study_drop >= 1.5:
             reasons.append(f"Daily study hours dropped by {round(study_drop, 1)} hrs")
 
+        if c_extra > 15.0:
+            reasons.append(f"High extracurricular load ({round(c_extra, 1)} hrs/week)")
+
         if not reasons:
             reasons.append("Academic and lifestyle indicators are aligned with your healthy baseline.")
 
@@ -203,7 +211,8 @@ class AIBehaviourRiskEngine:
                 "screen_time": c_screen,
                 "assignment_delay": c_delay,
                 "attendance": c_attendance,
-                "workload": c_workload
+                "workload": c_workload,
+                "extracurricular_hours": c_extra
             },
             baseline_metrics=baseline,
             penalties={
@@ -212,7 +221,8 @@ class AIBehaviourRiskEngine:
                 "screen": screen_diff * 6 if screen_diff > 1.0 else 0,
                 "delay": (delay_diff * 10 if delay_diff > 0 else 0) + (15 if c_delay >= 3 else 0),
                 "attendance": ((attendance_drop / 100.0) * 80 if attendance_drop > 2.0 else 0) + (20 if c_attendance < 75.0 else 0),
-                "study": study_drop * 8 if study_drop > 1.5 else 0
+                "study": study_drop * 8 if study_drop > 1.5 else 0,
+                "extra": (c_extra - 15.0) * 2 if c_extra > 15.0 else 0
             },
             total_risk_score=risk_score
         )
@@ -245,7 +255,8 @@ class AIBehaviourRiskEngine:
                 "screen_time": c_screen,
                 "assignment_delay": c_delay,
                 "attendance": c_attendance,
-                "workload": c_workload
+                "workload": c_workload,
+                "extracurricular_hours": c_extra
             }
         }
 
@@ -314,6 +325,15 @@ class AIBehaviourRiskEngine:
                 "baseline": baseline_metrics.get("study_hours", 4.0),
                 "unit": "hrs",
                 "is_adverse": current_metrics["study_hours"] < baseline_metrics.get("study_hours", 4.0)
+            },
+            {
+                "key": "extracurricular_hours",
+                "label": "Extracurriculars",
+                "penalty": penalties.get("extra", 0),
+                "current": current_metrics.get("extracurricular_hours", 0.0),
+                "baseline": 15.0,
+                "unit": "hrs",
+                "is_adverse": current_metrics.get("extracurricular_hours", 0.0) > 15.0
             }
         ]
 
